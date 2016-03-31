@@ -1,5 +1,5 @@
 {
-  "id": "/example-1",
+  "id": "example-service",
   "container": {
     "type": "DOCKER",
     "docker": {

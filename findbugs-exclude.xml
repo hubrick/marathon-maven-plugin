@@ -7,7 +7,7 @@
 
 	<!-- HelpMojo is generated code -->
 	<Match>
-		<Class name="com.holidaycheck.marathon.maven.HelpMojo" />
+		<Class name="com.hubrick.maven.storm.HelpMojo" />
 	</Match>
 
 </FindBugsFilter>

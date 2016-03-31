@@ -10,12 +10,6 @@ page at http://checkstyle.sourceforge.net/config.html -->
 
 <module name="Checker">
 
-  <module name="Header">
-    <property name="headerFile" value="java.header"/>
-    <property name="ignoreLines" value="2, 3"/>
-    <property name="fileExtensions" value="java"/>
-  </module>
-
   <module name="FileTabCharacter">
     <!-- Checks that there are no tab characters in the file.
     -->
@@ -150,7 +144,7 @@ page at http://checkstyle.sourceforge.net/config.html -->
 
     <module name="LineLength">
       <!-- Checks if a line is too long. -->
-      <property name="max" value="${com.puppycrawl.tools.checkstyle.checks.sizes.LineLength.max}" default="100"/>
+      <property name="max" value="${com.puppycrawl.tools.checkstyle.checks.sizes.LineLength.max}" default="160"/>
       <property name="severity" value="error"/>
 
       <!--
