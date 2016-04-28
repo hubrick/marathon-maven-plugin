@@ -138,7 +138,7 @@ public class DeployMojo extends AbstractMarathonMojo {
                                 ", Staged tasks: " + deployingApp.getTasksStaged() +
                                 ", Unhealthy tasks: " + deployingApp.getTasksUnhealthy() +
                                 ", Healthy tasks: " + deployingApp.getTasksHealthy()
-                                + ". Current running versions: " + currentRunningVersions.toString());
+                                + ". Current versions: " + currentRunningVersions.toString());
 
                         return Objects.equals(deployingApp.getTasksHealthy(), newRunningVersions.size())
                                 && Objects.equals(deployingApp.getTasks().size(), newRunningVersions.size());
@@ -177,7 +177,7 @@ public class DeployMojo extends AbstractMarathonMojo {
                                 ", Staged tasks: " + deployingApp.getTasksStaged() +
                                 ", Unhealthy tasks: " + deployingApp.getTasksUnhealthy() +
                                 ", Healthy tasks: " + deployingApp.getTasksHealthy()
-                                + ". Current running versions: " + currentRunningVersions.toString());
+                                + ". Current versions: " + currentRunningVersions.toString());
 
                         return Objects.equals(deployingApp.getTasksHealthy(), currentRunningVersions.size())
                                 && Objects.equals(deployingApp.getTasks().size(), currentRunningVersions.size());
