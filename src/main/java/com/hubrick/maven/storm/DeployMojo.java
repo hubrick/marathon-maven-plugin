@@ -15,15 +15,12 @@
  */
 package com.hubrick.maven.storm;
 
-import static com.hubrick.maven.storm.Utils.readApp;
-
 import com.jayway.awaitility.Awaitility;
 import mesosphere.marathon.client.Marathon;
 import mesosphere.marathon.client.MarathonClient;
 import mesosphere.marathon.client.model.v2.App;
 import mesosphere.marathon.client.model.v2.GetAppResponse;
 import mesosphere.marathon.client.model.v2.Result;
-
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
@@ -36,6 +33,8 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+
+import static com.hubrick.maven.storm.Utils.readApp;
 
 /**
  * Deploys via Marathon by sending config.
@@ -97,7 +96,7 @@ public class DeployMojo extends AbstractMarathonMojo {
                         return deployingAppVersions.isEmpty();
                     });
                 } catch (Exception e) {
-                    throw new MojoExecutionException("Previous deployment still hanging. Didn't finish in"
+                    throw new MojoExecutionException("Previous deployment still hanging. Didn't finish in "
                             + waitOnRunningDeploymentTimeoutInSec + " seconds", e);
                 }
             }
@@ -144,7 +143,7 @@ public class DeployMojo extends AbstractMarathonMojo {
                                 && Objects.equals(deployingApp.getTasks().size(), newRunningVersions.size());
                     });
                 } catch (Exception e) {
-                    throw new MojoExecutionException("Current deployment still hanging. Didn't finish in"
+                    throw new MojoExecutionException("Current deployment still hanging. Didn't finish in "
                             + waitForSuccessfulDeploymentTimeoutInSec + " seconds", e);
                 }
             }
@@ -183,7 +182,7 @@ public class DeployMojo extends AbstractMarathonMojo {
                                 && Objects.equals(deployingApp.getTasks().size(), currentRunningVersions.size());
                     });
                 } catch (Exception e) {
-                    throw new MojoExecutionException("Current deployment still hanging. Didn't finish in"
+                    throw new MojoExecutionException("Current deployment still hanging. Didn't finish in "
                             + waitForSuccessfulDeploymentTimeoutInSec + " seconds", e);
                 }
             }
