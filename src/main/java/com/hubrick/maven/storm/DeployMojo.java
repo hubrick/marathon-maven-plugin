@@ -88,7 +88,9 @@ public class DeployMojo extends AbstractMarathonMojo {
                         final Set<String> deployingAppVersions = marathon.getDeployments()
                                 .stream()
                                 .filter(e -> e.getAffectedApps().contains(app.getId()))
-                                .map(e -> e.getVersion()).collect(Collectors.toSet());
+                                .map(e -> e.getVersion())
+                                .sorted()
+                                .collect(Collectors.toSet());
 
                         getLog().info("Checking app " + app.getId() + ". Apps currently being deployed: "
                                 + deployingAppVersions.size() + ", versions: " + deployingAppVersions.toString());
@@ -121,14 +123,12 @@ public class DeployMojo extends AbstractMarathonMojo {
 
                         final GetAppResponse getAppResponse = marathon.getApp(app.getId());
                         final App deployingApp = getAppResponse.getApp();
-                        final List<String> currentRunningVersions = deployingApp.getTasks()
-                                .stream()
-                                .map(e -> e.getVersion())
-                                .collect(Collectors.toList());
+                        final List<String> currentRunningVersions = extractCurrentRunningVersions(deployingApp);
 
                         final List<String> newRunningVersions = currentRunningVersions
                                 .stream()
                                 .filter(e -> e.equals(result.getVersion()))
+                                .sorted()
                                 .collect(Collectors.toList());
 
                         Collections.sort(currentRunningVersions);
@@ -165,10 +165,7 @@ public class DeployMojo extends AbstractMarathonMojo {
 
                         final GetAppResponse getAppResponse = marathon.getApp(deployedApp.getId());
                         final App deployingApp = getAppResponse.getApp();
-                        final List<String> currentRunningVersions = deployingApp.getTasks()
-                                .stream()
-                                .map(e -> e.getVersion())
-                                .collect(Collectors.toList());
+                        final List<String> currentRunningVersions = extractCurrentRunningVersions(deployingApp);
 
                         Collections.sort(currentRunningVersions);
                         getLog().info("Checking app " + deployedApp.getId() +
@@ -189,5 +186,13 @@ public class DeployMojo extends AbstractMarathonMojo {
         } catch (Exception createAppException) {
             throw new MojoExecutionException("Failed to push Marathon config file to " + marathonHost, createAppException);
         }
+    }
+
+    private List<String> extractCurrentRunningVersions(App deployingApp) {
+        return deployingApp.getTasks()
+                .stream()
+                .map(e -> e.getVersion())
+                .sorted()
+                .collect(Collectors.toList());
     }
 }
