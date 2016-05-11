@@ -15,11 +15,13 @@
  */
 package com.hubrick.maven.storm;
 
+import com.google.common.base.Stopwatch;
 import com.jayway.awaitility.Awaitility;
 import mesosphere.marathon.client.Marathon;
 import mesosphere.marathon.client.MarathonClient;
 import mesosphere.marathon.client.model.v2.App;
 import mesosphere.marathon.client.model.v2.GetAppResponse;
+import mesosphere.marathon.client.model.v2.HealthCheckResult;
 import mesosphere.marathon.client.model.v2.Result;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -32,8 +34,10 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.hubrick.maven.storm.Utils.readApp;
+import static java.util.stream.Collectors.toList;
 
 /**
  * Deploys via Marathon by sending config.
@@ -111,13 +115,15 @@ public class DeployMojo extends AbstractMarathonMojo {
 
     private void updateApp(Marathon marathon, App app) throws MojoExecutionException {
         try {
+            final Stopwatch stopwatch = new Stopwatch().start();
             final Result result = marathon.updateApp(app.getId(), app);
+            final long timeoutInSeconds = waitForSuccessfulDeploymentTimeoutInSec * app.getInstances();
             if (waitForSuccessfulDeployment) {
                 try {
                     Awaitility.await()
-                            .pollDelay(30, TimeUnit.SECONDS)
+                            .pollDelay(10, TimeUnit.SECONDS)
                             .pollInterval(5, TimeUnit.SECONDS)
-                            .atMost(waitForSuccessfulDeploymentTimeoutInSec, TimeUnit.SECONDS).until(() -> {
+                            .atMost(timeoutInSeconds, TimeUnit.SECONDS).until(() -> {
 
                         final String deployedVersion = result.getVersion();
                         getLog().info("Checking app " + app.getId() + " with new version " + deployedVersion + " for successful deployment...");
@@ -130,11 +136,25 @@ public class DeployMojo extends AbstractMarathonMojo {
                                 .stream()
                                 .filter(e -> e.equals(deployedVersion))
                                 .sorted()
-                                .collect(Collectors.toList());
+                                .collect(toList());
 
                         if (newRunningVersions.isEmpty()) {
                             throw new MojoExecutionException("No version " + deployedVersion + " found, running versions are " +
                                     currentRunningVersions + ", deployment aborted.");
+                        }
+
+                        final List<HealthCheckResult> healthyNewInstances = deployingApp.getTasks()
+                                .stream()
+                                .filter(task -> task.getVersion().equals(deployedVersion))
+                                .flatMap(task -> task.getHealthCheckResults() == null ? Stream.of() : task.getHealthCheckResults().stream())
+                                .filter(HealthCheckResult::isAlive)
+                                .collect(toList());
+
+                        if (healthyNewInstances.size() == 1) {
+                            if (stopwatch.isRunning()) {
+                                stopwatch.stop();
+                                getLog().info("Time to first healthy instance is " + stopwatch.toString());
+                            }
                         }
 
                         getLog().info("Checking app " + app.getId() +
@@ -160,11 +180,12 @@ public class DeployMojo extends AbstractMarathonMojo {
     private void createApp(Marathon marathon, App app) throws MojoExecutionException {
         try {
             final App deployedApp = marathon.createApp(app);
+            final long timeoutInSeconds = waitForSuccessfulDeploymentTimeoutInSec * app.getInstances();
             if (waitForSuccessfulDeployment) {
                 try {
                     Awaitility.await()
                             .pollInterval(5, TimeUnit.SECONDS)
-                            .atMost(waitForSuccessfulDeploymentTimeoutInSec, TimeUnit.SECONDS).until(() -> {
+                            .atMost(timeoutInSeconds, TimeUnit.SECONDS).until(() -> {
 
                         getLog().info("Checking new app " + deployedApp.getId() + " for successful deployment...");
 
@@ -197,6 +218,6 @@ public class DeployMojo extends AbstractMarathonMojo {
                 .stream()
                 .map(e -> e.getVersion())
                 .sorted()
-                .collect(Collectors.toList());
+                .collect(toList());
     }
 }
