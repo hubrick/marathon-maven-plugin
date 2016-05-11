@@ -27,7 +27,6 @@ import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -116,10 +115,12 @@ public class DeployMojo extends AbstractMarathonMojo {
             if (waitForSuccessfulDeployment) {
                 try {
                     Awaitility.await()
+                            .pollDelay(30, TimeUnit.SECONDS)
                             .pollInterval(5, TimeUnit.SECONDS)
                             .atMost(waitForSuccessfulDeploymentTimeoutInSec, TimeUnit.SECONDS).until(() -> {
 
-                        getLog().info("Checking app " + app.getId() + " with new version " + result.getVersion() + " for successful deployment...");
+                        final String deployedVersion = result.getVersion();
+                        getLog().info("Checking app " + app.getId() + " with new version " + deployedVersion + " for successful deployment...");
 
                         final GetAppResponse getAppResponse = marathon.getApp(app.getId());
                         final App deployingApp = getAppResponse.getApp();
@@ -127,11 +128,15 @@ public class DeployMojo extends AbstractMarathonMojo {
 
                         final List<String> newRunningVersions = currentRunningVersions
                                 .stream()
-                                .filter(e -> e.equals(result.getVersion()))
+                                .filter(e -> e.equals(deployedVersion))
                                 .sorted()
                                 .collect(Collectors.toList());
 
-                        Collections.sort(currentRunningVersions);
+                        if (newRunningVersions.isEmpty()) {
+                            throw new MojoExecutionException("No version " + deployedVersion + " found, running versions are " +
+                                    currentRunningVersions + ", deployment aborted.");
+                        }
+
                         getLog().info("Checking app " + app.getId() +
                                 ". Running Tasks: " + deployingApp.getTasksRunning() +
                                 ", Staged tasks: " + deployingApp.getTasksStaged() +
@@ -167,7 +172,6 @@ public class DeployMojo extends AbstractMarathonMojo {
                         final App deployingApp = getAppResponse.getApp();
                         final List<String> currentRunningVersions = extractCurrentRunningVersions(deployingApp);
 
-                        Collections.sort(currentRunningVersions);
                         getLog().info("Checking app " + deployedApp.getId() +
                                 ". Running Tasks: " + deployingApp.getTasksRunning() +
                                 ", Staged tasks: " + deployingApp.getTasksStaged() +
