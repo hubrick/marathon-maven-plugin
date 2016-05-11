@@ -117,6 +117,10 @@ public class DeployMojo extends AbstractMarathonMojo {
         try {
             final Stopwatch stopwatch = new Stopwatch().start();
             final Result result = marathon.updateApp(app.getId(), app);
+            final String deployedVersion = result.getVersion();
+            getLog().info("Checking app " + app.getId() + " with new version " + deployedVersion + " for successful deployment... " +
+                    "(Id " + result.getDeploymentId() + ")");
+
             final long timeoutInSeconds = waitForSuccessfulDeploymentTimeoutInSec * app.getInstances();
             if (waitForSuccessfulDeployment) {
                 try {
@@ -124,9 +128,6 @@ public class DeployMojo extends AbstractMarathonMojo {
                             .pollDelay(10, TimeUnit.SECONDS)
                             .pollInterval(5, TimeUnit.SECONDS)
                             .atMost(timeoutInSeconds, TimeUnit.SECONDS).until(() -> {
-
-                        final String deployedVersion = result.getVersion();
-                        getLog().info("Checking app " + app.getId() + " with new version " + deployedVersion + " for successful deployment...");
 
                         final GetAppResponse getAppResponse = marathon.getApp(app.getId());
                         final App deployingApp = getAppResponse.getApp();
