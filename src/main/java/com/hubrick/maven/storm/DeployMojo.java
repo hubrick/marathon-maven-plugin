@@ -92,7 +92,6 @@ public class DeployMojo extends AbstractMarathonMojo {
                                 .stream()
                                 .filter(e -> e.getAffectedApps().contains(app.getId()))
                                 .map(e -> e.getVersion())
-                                .sorted()
                                 .collect(Collectors.toSet());
 
                         getLog().info("Checking app " + app.getId() + ". Apps currently being deployed: "
