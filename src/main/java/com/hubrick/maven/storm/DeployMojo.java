@@ -15,27 +15,29 @@
  */
 package com.hubrick.maven.storm;
 
-import static com.hubrick.maven.storm.Utils.readApp;
-
+import com.google.common.base.Stopwatch;
 import com.jayway.awaitility.Awaitility;
 import mesosphere.marathon.client.Marathon;
 import mesosphere.marathon.client.MarathonClient;
 import mesosphere.marathon.client.model.v2.App;
 import mesosphere.marathon.client.model.v2.GetAppResponse;
+import mesosphere.marathon.client.model.v2.HealthCheckResult;
 import mesosphere.marathon.client.model.v2.Result;
-
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static com.hubrick.maven.storm.Utils.readApp;
+import static java.util.stream.Collectors.toList;
 
 /**
  * Deploys via Marathon by sending config.
@@ -89,7 +91,8 @@ public class DeployMojo extends AbstractMarathonMojo {
                         final Set<String> deployingAppVersions = marathon.getDeployments()
                                 .stream()
                                 .filter(e -> e.getAffectedApps().contains(app.getId()))
-                                .map(e -> e.getVersion()).collect(Collectors.toSet());
+                                .map(e -> e.getVersion())
+                                .collect(Collectors.toSet());
 
                         getLog().info("Checking app " + app.getId() + ". Apps currently being deployed: "
                                 + deployingAppVersions.size() + ", versions: " + deployingAppVersions.toString());
@@ -97,7 +100,7 @@ public class DeployMojo extends AbstractMarathonMojo {
                         return deployingAppVersions.isEmpty();
                     });
                 } catch (Exception e) {
-                    throw new MojoExecutionException("Previous deployment still hanging. Didn't finish in"
+                    throw new MojoExecutionException("Previous deployment still hanging. Didn't finish in "
                             + waitOnRunningDeploymentTimeoutInSec + " seconds", e);
                 }
             }
@@ -111,28 +114,49 @@ public class DeployMojo extends AbstractMarathonMojo {
 
     private void updateApp(Marathon marathon, App app) throws MojoExecutionException {
         try {
+            final Stopwatch stopwatch = new Stopwatch().start();
             final Result result = marathon.updateApp(app.getId(), app);
+            final String deployedVersion = result.getVersion();
+            getLog().info("Checking app " + app.getId() + " with new version " + deployedVersion + " for successful deployment... " +
+                    "(Id " + result.getDeploymentId() + ")");
+
+            final long timeoutInSeconds = waitForSuccessfulDeploymentTimeoutInSec * app.getInstances();
             if (waitForSuccessfulDeployment) {
                 try {
                     Awaitility.await()
+                            .pollDelay(10, TimeUnit.SECONDS)
                             .pollInterval(5, TimeUnit.SECONDS)
-                            .atMost(waitForSuccessfulDeploymentTimeoutInSec, TimeUnit.SECONDS).until(() -> {
-
-                        getLog().info("Checking app " + app.getId() + " with new version " + result.getVersion() + " for successful deployment...");
+                            .atMost(timeoutInSeconds, TimeUnit.SECONDS).until(() -> {
 
                         final GetAppResponse getAppResponse = marathon.getApp(app.getId());
                         final App deployingApp = getAppResponse.getApp();
-                        final List<String> currentRunningVersions = deployingApp.getTasks()
-                                .stream()
-                                .map(e -> e.getVersion())
-                                .collect(Collectors.toList());
+                        final List<String> currentRunningVersions = extractCurrentRunningVersions(deployingApp);
 
                         final List<String> newRunningVersions = currentRunningVersions
                                 .stream()
-                                .filter(e -> e.equals(result.getVersion()))
-                                .collect(Collectors.toList());
+                                .filter(e -> e.equals(deployedVersion))
+                                .sorted()
+                                .collect(toList());
 
-                        Collections.sort(currentRunningVersions);
+                        if (newRunningVersions.isEmpty()) {
+                            throw new MojoExecutionException("No version " + deployedVersion + " found, running versions are " +
+                                    currentRunningVersions + ", deployment aborted.");
+                        }
+
+                        final List<HealthCheckResult> healthyNewInstances = deployingApp.getTasks()
+                                .stream()
+                                .filter(task -> task.getVersion().equals(deployedVersion))
+                                .flatMap(task -> task.getHealthCheckResults() == null ? Stream.of() : task.getHealthCheckResults().stream())
+                                .filter(HealthCheckResult::isAlive)
+                                .collect(toList());
+
+                        if (healthyNewInstances.size() == 1) {
+                            if (stopwatch.isRunning()) {
+                                stopwatch.stop();
+                                getLog().info("Time to first healthy instance is " + stopwatch.toString());
+                            }
+                        }
+
                         getLog().info("Checking app " + app.getId() +
                                 ". Running Tasks: " + deployingApp.getTasksRunning() +
                                 ", Staged tasks: " + deployingApp.getTasksStaged() +
@@ -144,7 +168,7 @@ public class DeployMojo extends AbstractMarathonMojo {
                                 && Objects.equals(deployingApp.getTasks().size(), newRunningVersions.size());
                     });
                 } catch (Exception e) {
-                    throw new MojoExecutionException("Current deployment still hanging. Didn't finish in"
+                    throw new MojoExecutionException("Current deployment still hanging. Didn't finish in "
                             + waitForSuccessfulDeploymentTimeoutInSec + " seconds", e);
                 }
             }
@@ -156,22 +180,19 @@ public class DeployMojo extends AbstractMarathonMojo {
     private void createApp(Marathon marathon, App app) throws MojoExecutionException {
         try {
             final App deployedApp = marathon.createApp(app);
+            final long timeoutInSeconds = waitForSuccessfulDeploymentTimeoutInSec * app.getInstances();
             if (waitForSuccessfulDeployment) {
                 try {
                     Awaitility.await()
                             .pollInterval(5, TimeUnit.SECONDS)
-                            .atMost(waitForSuccessfulDeploymentTimeoutInSec, TimeUnit.SECONDS).until(() -> {
+                            .atMost(timeoutInSeconds, TimeUnit.SECONDS).until(() -> {
 
                         getLog().info("Checking new app " + deployedApp.getId() + " for successful deployment...");
 
                         final GetAppResponse getAppResponse = marathon.getApp(deployedApp.getId());
                         final App deployingApp = getAppResponse.getApp();
-                        final List<String> currentRunningVersions = deployingApp.getTasks()
-                                .stream()
-                                .map(e -> e.getVersion())
-                                .collect(Collectors.toList());
+                        final List<String> currentRunningVersions = extractCurrentRunningVersions(deployingApp);
 
-                        Collections.sort(currentRunningVersions);
                         getLog().info("Checking app " + deployedApp.getId() +
                                 ". Running Tasks: " + deployingApp.getTasksRunning() +
                                 ", Staged tasks: " + deployingApp.getTasksStaged() +
@@ -183,12 +204,20 @@ public class DeployMojo extends AbstractMarathonMojo {
                                 && Objects.equals(deployingApp.getTasks().size(), currentRunningVersions.size());
                     });
                 } catch (Exception e) {
-                    throw new MojoExecutionException("Current deployment still hanging. Didn't finish in"
+                    throw new MojoExecutionException("Current deployment still hanging. Didn't finish in "
                             + waitForSuccessfulDeploymentTimeoutInSec + " seconds", e);
                 }
             }
         } catch (Exception createAppException) {
             throw new MojoExecutionException("Failed to push Marathon config file to " + marathonHost, createAppException);
         }
+    }
+
+    private List<String> extractCurrentRunningVersions(App deployingApp) {
+        return deployingApp.getTasks()
+                .stream()
+                .map(e -> e.getVersion())
+                .sorted()
+                .collect(toList());
     }
 }
