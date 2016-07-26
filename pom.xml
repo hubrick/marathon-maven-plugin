@@ -57,7 +57,7 @@
         <dependency>
             <groupId>com.mesosphere</groupId>
             <artifactId>marathon-client</artifactId>
-            <version>0.2.1-SNAPSHOT</version>
+            <version>0.2.1</version>
         </dependency>
         <dependency>
             <groupId>com.google.code.gson</groupId>
