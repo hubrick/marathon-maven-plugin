@@ -153,11 +153,9 @@ public class DeployMojo extends AbstractMarathonMojo {
                                 .filter(HealthCheckResult::isAlive)
                                 .collect(toList());
 
-                        if (healthyNewInstances.size() > 1) {
-                            if (stopwatch.isRunning()) {
-                                stopwatch.stop();
-                                getLog().info("Time to first healthy instance is " + stopwatch.toString());
-                            }
+                        if (!healthyNewInstances.isEmpty() && stopwatch.isRunning()) {
+                            stopwatch.stop();
+                            getLog().info("Time to first healthy instance is " + stopwatch.toString());
                         }
 
                         getLog().info("Checking app " + app.getId() +
