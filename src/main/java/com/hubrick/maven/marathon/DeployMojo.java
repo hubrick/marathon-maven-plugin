@@ -120,7 +120,8 @@ public class DeployMojo extends AbstractMarathonMojo {
             getLog().info("Checking app " + app.getId() + " with new version " + deployedVersion + " for successful deployment... " +
                     "(Id " + result.getDeploymentId() + ")");
 
-            final long timeoutInSeconds = waitForSuccessfulDeploymentTimeoutInSec * app.getInstances();
+            final long timeoutInSeconds = waitForSuccessfulDeploymentTimeoutInSec *
+                    com.google.common.base.Objects.firstNonNull(app.getInstances(), Integer.valueOf(1));
             if (waitForSuccessfulDeployment) {
                 try {
                     Awaitility.await()
@@ -180,7 +181,8 @@ public class DeployMojo extends AbstractMarathonMojo {
     private void createApp(Marathon marathon, App app) throws MojoExecutionException {
         try {
             final App deployedApp = marathon.createApp(app);
-            final long timeoutInSeconds = waitForSuccessfulDeploymentTimeoutInSec * app.getInstances();
+            final long timeoutInSeconds = waitForSuccessfulDeploymentTimeoutInSec *
+                    com.google.common.base.Objects.firstNonNull(app.getInstances(), Integer.valueOf(1));
             if (waitForSuccessfulDeployment) {
                 try {
                     Awaitility.await()
