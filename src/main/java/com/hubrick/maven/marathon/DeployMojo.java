@@ -153,7 +153,7 @@ public class DeployMojo extends AbstractMarathonMojo {
                                 .filter(HealthCheckResult::isAlive)
                                 .collect(toList());
 
-                        if (healthyNewInstances.size() == 1) {
+                        if (healthyNewInstances.size() > 1) {
                             if (stopwatch.isRunning()) {
                                 stopwatch.stop();
                                 getLog().info("Time to first healthy instance is " + stopwatch.toString());
