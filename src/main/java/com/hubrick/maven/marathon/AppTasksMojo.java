@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.hubrick.maven.storm;
+package com.hubrick.maven.marathon;
 
-import static com.hubrick.maven.storm.Utils.readApp;
+import static com.hubrick.maven.marathon.Utils.readApp;
 
 import mesosphere.marathon.client.Marathon;
 import mesosphere.marathon.client.MarathonClient;

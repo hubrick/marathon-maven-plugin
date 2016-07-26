@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.hubrick.maven.storm;
+package com.hubrick.maven.marathon;
 
 import mesosphere.marathon.client.Marathon;
 import mesosphere.marathon.client.utils.MarathonException;

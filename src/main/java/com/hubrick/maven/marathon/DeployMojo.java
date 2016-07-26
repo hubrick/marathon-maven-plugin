@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.hubrick.maven.storm;
+package com.hubrick.maven.marathon;
 
 import com.google.common.base.Stopwatch;
 import com.jayway.awaitility.Awaitility;
@@ -36,7 +36,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.hubrick.maven.storm.Utils.readApp;
+import static com.hubrick.maven.marathon.Utils.readApp;
 import static java.util.stream.Collectors.toList;
 
 /**
