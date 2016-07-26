@@ -16,16 +16,14 @@
 package com.hubrick.maven.marathon;
 
 
-import static org.hamcrest.CoreMatchers.isA;
-
-import java.io.FileNotFoundException;
-
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
+import com.squareup.okhttp.mockwebserver.MockResponse;
+import com.squareup.okhttp.mockwebserver.RecordedRequest;
+import com.squareup.okhttp.mockwebserver.rule.MockWebServerRule;
 import mesosphere.marathon.client.model.v2.App;
 import mesosphere.marathon.client.utils.MarathonException;
 import mesosphere.marathon.client.utils.ModelUtils;
-
 import org.apache.maven.plugin.MojoExecutionException;
 import org.codehaus.plexus.configuration.DefaultPlexusConfiguration;
 import org.codehaus.plexus.configuration.PlexusConfiguration;
@@ -33,9 +31,9 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import com.squareup.okhttp.mockwebserver.MockResponse;
-import com.squareup.okhttp.mockwebserver.RecordedRequest;
-import com.squareup.okhttp.mockwebserver.rule.MockWebServerRule;
+import java.io.FileNotFoundException;
+
+import static org.hamcrest.CoreMatchers.isA;
 
 
 public class DeployMojoTest extends AbstractMarathonMojoTestWithJUnit4 {
@@ -106,6 +104,7 @@ public class DeployMojoTest extends AbstractMarathonMojoTestWithJUnit4 {
     public void testSuccessfulDeployAppAlreadyExists() throws Exception {
         server.enqueue(new MockResponse().setResponseCode(200).setBody(Resources.toString(Resources.getResource(DeployMojoTest.class, "/getAppResponse.json"), Charsets.UTF_8)));
         server.enqueue(new MockResponse().setResponseCode(200).setBody("[]"));
+        server.enqueue(new MockResponse().setResponseCode(200).setBody(Resources.toString(Resources.getResource(DeployMojoTest.class, "/getAppResponse.json"), Charsets.UTF_8)));
         server.enqueue(new MockResponse().setResponseCode(200).setBody(Resources.toString(Resources.getResource(DeployMojoTest.class, "/updateAppResponse.json"), Charsets.UTF_8)));
         server.enqueue(new MockResponse().setResponseCode(200).setBody(Resources.toString(Resources.getResource(DeployMojoTest.class, "/getAppResponse.json"), Charsets.UTF_8)));
 
@@ -114,7 +113,7 @@ public class DeployMojoTest extends AbstractMarathonMojoTestWithJUnit4 {
 
         mojo.execute();
 
-        assertEquals(4, server.getRequestCount());
+        assertEquals(5, server.getRequestCount());
 
         RecordedRequest getAppRequest = server.takeRequest();
         assertEquals(APPS_PATH + "/" + APP_ID, getAppRequest.getPath());
@@ -124,6 +123,10 @@ public class DeployMojoTest extends AbstractMarathonMojoTestWithJUnit4 {
         assertEquals(DEPLOYMENTS_PATH, getDeploymentsRequest.getPath());
         assertEquals("GET", getDeploymentsRequest.getMethod());
 
+        RecordedRequest getAppRequest2 = server.takeRequest();
+        assertEquals(APPS_PATH + "/" + APP_ID, getAppRequest2.getPath());
+        assertEquals("GET", getAppRequest2.getMethod());
+
         RecordedRequest updateAppRequest = server.takeRequest();
         assertEquals(APPS_PATH + "/" + APP_ID, updateAppRequest.getPath());
         assertEquals("PUT", updateAppRequest.getMethod());
@@ -131,9 +134,9 @@ public class DeployMojoTest extends AbstractMarathonMojoTestWithJUnit4 {
         assertNotNull(requestApp);
         assertEquals(APP_ID, requestApp.getId());
 
-        RecordedRequest getAppRequest2 = server.takeRequest();
-        assertEquals(APPS_PATH + "/" + APP_ID, getAppRequest2.getPath());
-        assertEquals("GET", getAppRequest2.getMethod());
+        RecordedRequest getAppRequest3 = server.takeRequest();
+        assertEquals(APPS_PATH + "/" + APP_ID, getAppRequest3.getPath());
+        assertEquals("GET", getAppRequest3.getMethod());
     }
 
     @Test

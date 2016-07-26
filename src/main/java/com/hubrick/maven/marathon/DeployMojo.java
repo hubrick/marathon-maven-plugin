@@ -115,13 +115,15 @@ public class DeployMojo extends AbstractMarathonMojo {
     private void updateApp(Marathon marathon, App app) throws MojoExecutionException {
         try {
             final Stopwatch stopwatch = new Stopwatch().start();
+            final App currentApp = marathon.getApp(app.getId()).getApp();
             final Result result = marathon.updateApp(app.getId(), app);
             final String deployedVersion = result.getVersion();
             getLog().info("Checking app " + app.getId() + " with new version " + deployedVersion + " for successful deployment... " +
                     "(Id " + result.getDeploymentId() + ")");
 
+
             final long timeoutInSeconds = waitForSuccessfulDeploymentTimeoutInSec *
-                    com.google.common.base.Objects.firstNonNull(app.getInstances(), Integer.valueOf(1));
+                    com.google.common.base.Objects.firstNonNull(app.getInstances(), currentApp.getInstances());
             if (waitForSuccessfulDeployment) {
                 try {
                     Awaitility.await()
