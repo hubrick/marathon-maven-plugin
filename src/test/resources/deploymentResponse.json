@@ -1,0 +1,28 @@
+[
+    {
+        "id": "eae6de28-8cd9-4a42-9051-35cc130d0ee6",
+        "version": "2016-07-27T08:05:41.822Z",
+        "affectedApps": [
+            "/example-service"
+        ],
+        "steps": [
+            {
+                "actions": [
+                    {
+                        "type": "RestartApplication",
+                        "app": "/example-service"
+                    }
+                ]
+            }
+        ],
+        "currentActions": [
+            {
+                "action": "RestartApplication",
+                "app": "/example-service",
+                "readinessCheckResults": []
+            }
+        ],
+        "currentStep": 1,
+        "totalSteps": 1
+    }
+]

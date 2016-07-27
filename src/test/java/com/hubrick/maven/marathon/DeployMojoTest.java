@@ -216,4 +216,48 @@ public class DeployMojoTest extends AbstractMarathonMojoTestWithJUnit4 {
         assertEquals("PUT", updateAppRequest.getMethod());
     }
 
+    @Test
+    public void testSuccessfulDeployAppExistingAlreadyDeploying() throws Exception {
+        server.enqueue(new MockResponse().setResponseCode(200).setBody(Resources.toString(Resources.getResource(DeployMojoTest.class, "/getAppResponse.json"), Charsets.UTF_8)));
+        server.enqueue(new MockResponse().setResponseCode(200).setBody(Resources.toString(Resources.getResource(DeployMojoTest.class, "/deploymentResponse.json"), Charsets.UTF_8)));
+        server.enqueue(new MockResponse().setResponseCode(200).setBody("[]"));
+        server.enqueue(new MockResponse().setResponseCode(200).setBody(Resources.toString(Resources.getResource(DeployMojoTest.class, "/getAppResponse.json"), Charsets.UTF_8)));
+        server.enqueue(new MockResponse().setResponseCode(200).setBody(Resources.toString(Resources.getResource(DeployMojoTest.class, "/updateAppResponse.json"), Charsets.UTF_8)));
+        server.enqueue(new MockResponse().setResponseCode(200).setBody(Resources.toString(Resources.getResource(DeployMojoTest.class, "/getAppResponse.json"), Charsets.UTF_8)));
+
+        final DeployMojo mojo = lookupDeployMojo();
+        assertNotNull(mojo);
+
+        mojo.execute();
+
+        assertEquals(5, server.getRequestCount());
+
+        RecordedRequest getAppRequest = server.takeRequest();
+        assertEquals(APPS_PATH + "/" + APP_ID, getAppRequest.getPath());
+        assertEquals("GET", getAppRequest.getMethod());
+
+        RecordedRequest getDeploymentsRequest = server.takeRequest();
+        assertEquals(DEPLOYMENTS_PATH, getDeploymentsRequest.getPath());
+        assertEquals("GET", getDeploymentsRequest.getMethod());
+
+        RecordedRequest getDeploymentsRequest2 = server.takeRequest();
+        assertEquals(DEPLOYMENTS_PATH, getDeploymentsRequest2.getPath());
+        assertEquals("GET", getDeploymentsRequest2.getMethod());
+
+        RecordedRequest getAppRequest2 = server.takeRequest();
+        assertEquals(APPS_PATH + "/" + APP_ID, getAppRequest2.getPath());
+        assertEquals("GET", getAppRequest2.getMethod());
+
+        RecordedRequest updateAppRequest = server.takeRequest();
+        assertEquals(APPS_PATH + "/" + APP_ID, updateAppRequest.getPath());
+        assertEquals("PUT", updateAppRequest.getMethod());
+        App requestApp = ModelUtils.GSON.fromJson(updateAppRequest.getBody().readUtf8(), App.class);
+        assertNotNull(requestApp);
+        assertEquals(APP_ID, requestApp.getId());
+
+        RecordedRequest getAppRequest3 = server.takeRequest();
+        assertEquals(APPS_PATH + "/" + APP_ID, getAppRequest3.getPath());
+        assertEquals("GET", getAppRequest3.getMethod());
+    }
+
 }
