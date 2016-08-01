@@ -128,7 +128,7 @@ public class DeployMojoTest extends AbstractMarathonMojoTestWithJUnit4 {
         assertEquals("GET", getAppRequest2.getMethod());
 
         RecordedRequest updateAppRequest = server.takeRequest();
-        assertEquals(APPS_PATH + "/" + APP_ID, updateAppRequest.getPath());
+        assertEquals(APPS_PATH + "/" + APP_ID + "?force=false", updateAppRequest.getPath());
         assertEquals("PUT", updateAppRequest.getMethod());
         App requestApp = ModelUtils.GSON.fromJson(updateAppRequest.getBody().readUtf8(), App.class);
         assertNotNull(requestApp);
@@ -230,7 +230,7 @@ public class DeployMojoTest extends AbstractMarathonMojoTestWithJUnit4 {
 
         mojo.execute();
 
-        assertEquals(5, server.getRequestCount());
+        assertEquals(6, server.getRequestCount());
 
         RecordedRequest getAppRequest = server.takeRequest();
         assertEquals(APPS_PATH + "/" + APP_ID, getAppRequest.getPath());
@@ -249,7 +249,7 @@ public class DeployMojoTest extends AbstractMarathonMojoTestWithJUnit4 {
         assertEquals("GET", getAppRequest2.getMethod());
 
         RecordedRequest updateAppRequest = server.takeRequest();
-        assertEquals(APPS_PATH + "/" + APP_ID, updateAppRequest.getPath());
+        assertEquals(APPS_PATH + "/" + APP_ID + "?force=false", updateAppRequest.getPath());
         assertEquals("PUT", updateAppRequest.getMethod());
         App requestApp = ModelUtils.GSON.fromJson(updateAppRequest.getBody().readUtf8(), App.class);
         assertNotNull(requestApp);

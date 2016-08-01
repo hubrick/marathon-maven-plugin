@@ -116,7 +116,7 @@ public class DeployMojo extends AbstractMarathonMojo {
         try {
             final Stopwatch stopwatch = new Stopwatch().start();
             final App currentApp = marathon.getApp(app.getId()).getApp();
-            final Result result = marathon.updateApp(app.getId(), app);
+            final Result result = marathon.updateApp(app.getId(), app, false);
             final String deployedVersion = result.getVersion();
             getLog().info("Checking app " + app.getId() + " with new version " + deployedVersion + " for successful deployment... " +
                     "(Id " + result.getDeploymentId() + ")");
