@@ -72,16 +72,28 @@ public class DeployMojoTest extends AbstractMarathonMojoTestWithJUnit4 {
 
     @Test
     public void testSuccessfulDeployAppNotCreatedYet() throws Exception {
+        // check for app
         server.enqueue(new MockResponse().setResponseCode(404));
+
+        // create response
         server.enqueue(new MockResponse().setResponseCode(200).setBody(Resources.toString(Resources.getResource(DeployMojoTest.class, "/appResponse.json"), Charsets.UTF_8)));
-        server.enqueue(new MockResponse().setResponseCode(200).setBody(Resources.toString(Resources.getResource(DeployMojoTest.class, "/getAppResponse.json"), Charsets.UTF_8)));
+
+        // load deploying versions
+        server.enqueue(new MockResponse().setResponseCode(200).setBody(Resources.toString(Resources.getResource(DeployMojoTest.class, "/deploymentResponse.json"), Charsets.UTF_8)));
+
+        // check for finished deployment
+        server.enqueue(new MockResponse().setResponseCode(200).setBody(Resources.toString(Resources.getResource(DeployMojoTest.class, "/deployedGetAppResponse.json"), Charsets.UTF_8)));
+
+
+        server.enqueue(new MockResponse().setResponseCode(500));
+
 
         final DeployMojo mojo = lookupDeployMojo();
         assertNotNull(mojo);
 
         mojo.execute();
 
-        assertEquals(3, server.getRequestCount());
+        assertEquals(4, server.getRequestCount());
 
         RecordedRequest getAppRequest = server.takeRequest();
         assertEquals(APPS_PATH + "/" + APP_ID, getAppRequest.getPath());
@@ -90,6 +102,10 @@ public class DeployMojoTest extends AbstractMarathonMojoTestWithJUnit4 {
         RecordedRequest createAppRequest = server.takeRequest();
         assertEquals(APPS_PATH, createAppRequest.getPath());
         assertEquals("POST", createAppRequest.getMethod());
+
+        RecordedRequest getDeploymentsRequest = server.takeRequest();
+        assertEquals(DEPLOYMENTS_PATH, getDeploymentsRequest.getPath());
+        assertEquals("GET", getDeploymentsRequest.getMethod());
 
         RecordedRequest getAppRequest2 = server.takeRequest();
         assertEquals(APPS_PATH + "/" + APP_ID, getAppRequest2.getPath());
@@ -107,6 +123,7 @@ public class DeployMojoTest extends AbstractMarathonMojoTestWithJUnit4 {
         server.enqueue(new MockResponse().setResponseCode(200).setBody(Resources.toString(Resources.getResource(DeployMojoTest.class, "/getAppResponse.json"), Charsets.UTF_8)));
         server.enqueue(new MockResponse().setResponseCode(200).setBody(Resources.toString(Resources.getResource(DeployMojoTest.class, "/updateAppResponse.json"), Charsets.UTF_8)));
         server.enqueue(new MockResponse().setResponseCode(200).setBody(Resources.toString(Resources.getResource(DeployMojoTest.class, "/getAppResponse.json"), Charsets.UTF_8)));
+        server.enqueue(new MockResponse().setResponseCode(500));
 
         final DeployMojo mojo = lookupDeployMojo();
         assertNotNull(mojo);
@@ -224,6 +241,7 @@ public class DeployMojoTest extends AbstractMarathonMojoTestWithJUnit4 {
         server.enqueue(new MockResponse().setResponseCode(200).setBody(Resources.toString(Resources.getResource(DeployMojoTest.class, "/getAppResponse.json"), Charsets.UTF_8)));
         server.enqueue(new MockResponse().setResponseCode(200).setBody(Resources.toString(Resources.getResource(DeployMojoTest.class, "/updateAppResponse.json"), Charsets.UTF_8)));
         server.enqueue(new MockResponse().setResponseCode(200).setBody(Resources.toString(Resources.getResource(DeployMojoTest.class, "/getAppResponse.json"), Charsets.UTF_8)));
+        server.enqueue(new MockResponse().setResponseCode(500));
 
         final DeployMojo mojo = lookupDeployMojo();
         assertNotNull(mojo);
