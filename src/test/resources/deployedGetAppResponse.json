@@ -1,0 +1,138 @@
+{
+    "app": {
+        "id": "/example-service",
+        "cmd": null,
+        "args": [],
+        "user": null,
+        "env": {
+            "JAVA_OPTS": "-Xms512m -Xmx512m",
+            "SERVICE_8080_NAME": "example-service"
+        },
+        "instances": 2,
+        "cpus": 0.02,
+        "mem": 768.0,
+        "disk": 0.0,
+        "executor": "",
+        "constraints": [
+            [
+                "hostname",
+                "UNIQUE"
+            ]
+        ],
+        "uris": [
+            "file:///root/.dockercfg"
+        ],
+        "storeUrls": [],
+        "ports": [
+            10000
+        ],
+        "requirePorts": false,
+        "backoffSeconds": 1,
+        "backoffFactor": 1.15,
+        "maxLaunchDelaySeconds": 3600,
+        "container": {
+            "type": "DOCKER",
+            "volumes": [],
+            "docker": {
+                "image": "docker.hubrick.io/service/example-service:20160330-1609-00f7024",
+                "network": "BRIDGE",
+                "portMappings": [
+                    {
+                        "containerPort": 8080,
+                        "hostPort": 0,
+                        "servicePort": 10000,
+                        "protocol": "tcp"
+                    }
+                ],
+                "privileged": false,
+                "parameters": [],
+                "forcePullImage": false
+            }
+        },
+        "healthChecks": [
+            {
+                "path": "/api-docs",
+                "protocol": "HTTP",
+                "portIndex": 0,
+                "gracePeriodSeconds": 90,
+                "intervalSeconds": 20,
+                "timeoutSeconds": 20,
+                "maxConsecutiveFailures": 5,
+                "ignoreHttp1xx": false
+            }
+        ],
+        "dependencies": [],
+        "upgradeStrategy": {
+            "minimumHealthCapacity": 1.0,
+            "maximumOverCapacity": 1.0
+        },
+        "labels": {},
+        "acceptedResourceRoles": null,
+        "version": "2016-03-30T14:19:18.224Z",
+        "versionInfo": {
+            "lastScalingAt": "2016-03-30T14:19:18.224Z",
+            "lastConfigChangeAt": "2016-03-30T14:19:18.224Z"
+        },
+        "tasksStaged": 0,
+        "tasksRunning": 2,
+        "tasksHealthy": 2,
+        "tasksUnhealthy": 0,
+        "deployments": [],
+        "tasks": [
+            {
+                "id": "example-service.88188dd7-f682-11e5-9635-029148970fef",
+                "host": "executor-3.eu-central-1.staging.hubrick.net",
+                "ports": [
+                    31815
+                ],
+                "startedAt": "2016-03-30T14:20:28.557Z",
+                "stagedAt": "2016-03-30T14:20:19.416Z",
+                "version": "2016-07-27T08:05:41.822Z",
+                "slaveId": "20160224-084825-1093017516-5050-32550-S6",
+                "appId": "/example-service",
+                "healthCheckResults": [
+                    {
+                        "alive": true,
+                        "consecutiveFailures": 0,
+                        "firstSuccess": "2016-03-30T14:21:19.657Z",
+                        "lastFailure": null,
+                        "lastSuccess": "2016-03-31T13:37:01.086Z",
+                        "taskId": "example-service.88188dd7-f682-11e5-9635-029148970fef"
+                    }
+                ]
+            },
+            {
+                "id": "example-service.63bcff75-f682-11e5-9635-029148970fef",
+                "host": "executor-2.eu-central-1.staging.hubrick.net",
+                "ports": [
+                    31461
+                ],
+                "startedAt": "2016-03-30T14:19:27.219Z",
+                "stagedAt": "2016-03-30T14:19:18.418Z",
+                "version": "2016-07-27T08:05:41.822Z",
+                "slaveId": "20160224-084825-1093017516-5050-32550-S8",
+                "appId": "/example-service",
+                "healthCheckResults": [
+                    {
+                        "alive": true,
+                        "consecutiveFailures": 0,
+                        "firstSuccess": "2016-03-30T14:20:18.494Z",
+                        "lastFailure": null,
+                        "lastSuccess": "2016-03-31T13:37:01.093Z",
+                        "taskId": "example-service.63bcff75-f682-11e5-9635-029148970fef"
+                    }
+                ]
+            }
+        ],
+        "lastTaskFailure": {
+            "appId": "/example-service",
+            "host": "executor-6.eu-central-1.staging.hubrick.net",
+            "message": "Docker container run error: Container exited on error: exited with status 1",
+            "state": "TASK_FAILED",
+            "taskId": "example-service.df5d820e-f64d-11e5-9635-029148970fef",
+            "timestamp": "2016-03-30T08:33:10.883Z",
+            "version": "2016-03-30T07:35:13.953Z",
+            "slaveId": "20160304-061951-1999852298-5050-11022-S0"
+        }
+    }
+}
