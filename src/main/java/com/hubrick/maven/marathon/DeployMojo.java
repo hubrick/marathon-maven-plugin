@@ -132,7 +132,7 @@ public class DeployMojo extends AbstractMarathonMojo {
 
 
             final long timeoutInSeconds = waitForSuccessfulDeploymentTimeoutInSec *
-                    com.google.common.base.Objects.firstNonNull(app.getInstances(), currentApp.getInstances());
+                    Math.max(1, com.google.common.base.Objects.firstNonNull(app.getInstances(), currentApp.getInstances()));
             if (waitForSuccessfulDeployment) {
                 waitForSuccessfulDeployment(marathon, app.getId(), stopwatch, deployedVersion, timeoutInSeconds);
             }
@@ -205,7 +205,7 @@ public class DeployMojo extends AbstractMarathonMojo {
             final Stopwatch stopwatch = new Stopwatch().start();
             final App deployedApp = marathon.createApp(app);
             final long timeoutInSeconds = waitForSuccessfulDeploymentTimeoutInSec *
-                    com.google.common.base.Objects.firstNonNull(app.getInstances(), Integer.valueOf(1));
+                    Math.max(1, com.google.common.base.Objects.firstNonNull(app.getInstances(), Integer.valueOf(1)));
             if (waitForSuccessfulDeployment) {
                 final Set<String> deployingVersions = loadCurrentlyDeployingVersions(marathon, deployedApp).stream()
                         .collect(toSet());
