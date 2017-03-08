@@ -16,6 +16,7 @@
 package com.hubrick.maven.marathon;
 
 import com.google.common.base.Stopwatch;
+import com.google.common.base.Throwables;
 import com.jayway.awaitility.Awaitility;
 import com.jayway.awaitility.core.ConditionTimeoutException;
 import mesosphere.marathon.client.Marathon;
@@ -35,6 +36,7 @@ import org.apache.maven.plugins.annotations.Parameter;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
@@ -79,6 +81,14 @@ public class DeployMojo extends AbstractMarathonMojo {
      */
     @Parameter(property = "waitForSuccessfulDeploymentTimeoutInSec", required = false, defaultValue = "300")
     private Integer waitForSuccessfulDeploymentTimeoutInSec;
+
+    /**
+     * Defines if the deployment should be rolled back when an error occurs, like the timeout or anything
+     * other that would mark the deployment as failed.
+     * Only in effect if waitForSuccessfulDeployment is set.
+     */
+    @Parameter(property = "rollbackOnDeploymentError", required = false, defaultValue = "true")
+    private Boolean rollbackOnDeploymentError;
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
@@ -134,7 +144,7 @@ public class DeployMojo extends AbstractMarathonMojo {
             final long timeoutInSeconds = waitForSuccessfulDeploymentTimeoutInSec *
                     Math.max(1, com.google.common.base.Objects.firstNonNull(app.getInstances(), currentApp.getInstances()));
             if (waitForSuccessfulDeployment) {
-                waitForSuccessfulDeployment(marathon, app.getId(), stopwatch, deployedVersion, timeoutInSeconds);
+                waitForSuccessfulDeployment(marathon, app.getId(), stopwatch, deployedVersion, result.getDeploymentId(), timeoutInSeconds);
             }
         } catch (MarathonException updateAppException) {
             throw new MojoExecutionException("Failed to update Marathon config file at " + marathonHost, updateAppException);
@@ -145,6 +155,7 @@ public class DeployMojo extends AbstractMarathonMojo {
                                              final String appId,
                                              final Stopwatch stopwatch,
                                              final String deployedVersion,
+                                             final String deploymentId,
                                              final long timeoutInSeconds) throws MojoExecutionException {
         try {
             Awaitility.await()
@@ -163,8 +174,9 @@ public class DeployMojo extends AbstractMarathonMojo {
                         .collect(toList());
 
                 if (newRunningVersions.isEmpty()) {
-                    final List<String> versions = loadCurrentlyDeployingVersions(marathon, deployingApp);
+                    final List<Deployment> versions = loadCurrentlyDeploymentsForApp(marathon, appId);
                     versions.stream()
+                            .map(Deployment::getVersion)
                             .filter(deployedVersion::equals)
                             .findFirst()
                             .orElseThrow(() -> new MojoExecutionException("No version " + deployedVersion + " and" +
@@ -195,8 +207,37 @@ public class DeployMojo extends AbstractMarathonMojo {
                         && Objects.equals(deployingApp.getTasks().size(), newRunningVersions.size());
             });
         } catch (ConditionTimeoutException e) {
-            throw new MojoExecutionException("Current deployment still hanging. Didn't finish in "
-                    + waitForSuccessfulDeploymentTimeoutInSec + " seconds", e);
+            if (rollbackOnDeploymentError) {
+                rollback(marathon, appId, deploymentId, e);
+            } else {
+                throw new MojoExecutionException("Current deployment still hanging. Didn't finish in "
+                        + waitForSuccessfulDeploymentTimeoutInSec + " seconds", e);
+            }
+        } catch (Exception e) {
+            if (rollbackOnDeploymentError) {
+                rollback(marathon, appId, deploymentId, e);
+            }
+            throw Throwables.propagate(e);
+        }
+    }
+
+    private void rollback(final Marathon marathon,
+                          final String appId,
+                          final String deploymentId,
+                          final Exception cause) throws MojoExecutionException {
+        try {
+            final Optional<String> runningDeployment = loadCurrentlyDeploymentsForApp(marathon, appId)
+                    .stream()
+                    .map(Deployment::getId)
+                    .filter(deploymentId::equals)
+                    .findFirst();
+
+            if (runningDeployment.isPresent()) {
+                marathon.cancelDeploymentAndRollback(deploymentId);
+                throw new MojoExecutionException("Deployment rolled back after deployement " + deploymentId + " failed due to " + cause.getMessage(), cause);
+            }
+        } catch (MarathonException e) {
+            throw new MojoExecutionException("Rollback of deployment " + deploymentId + " failed after deployment failed due to " + cause.getMessage(), cause);
         }
     }
 
@@ -207,25 +248,23 @@ public class DeployMojo extends AbstractMarathonMojo {
             final long timeoutInSeconds = waitForSuccessfulDeploymentTimeoutInSec *
                     Math.max(1, com.google.common.base.Objects.firstNonNull(app.getInstances(), Integer.valueOf(1)));
             if (waitForSuccessfulDeployment) {
-                final Set<String> deployingVersions = loadCurrentlyDeployingVersions(marathon, deployedApp).stream()
+                final Set<Deployment> deployments = loadCurrentlyDeploymentsForApp(marathon, deployedApp.getId()).stream()
                         .collect(toSet());
-                if (deployingVersions.size() != 1) {
-                    throw new MojoExecutionException("Expected exactly one version for newly created app, but got " + deployingVersions);
+                if (deployments.size() != 1) {
+                    throw new MojoExecutionException("Expected exactly one version for newly created app, but got " + deployments);
                 }
-
-                waitForSuccessfulDeployment(marathon, deployedApp.getId(), stopwatch, getOnlyElement(deployingVersions), timeoutInSeconds);
+                final Deployment deployment = getOnlyElement(deployments);
+                waitForSuccessfulDeployment(marathon, deployedApp.getId(), stopwatch, deployment.getVersion(), deployment.getId(), timeoutInSeconds);
             }
         } catch (MarathonException createAppException) {
             throw new MojoExecutionException("Failed to push Marathon config file to " + marathonHost, createAppException);
         }
     }
 
-    private List<String> loadCurrentlyDeployingVersions(final Marathon marathon, final App deployingApp) throws MarathonException {
+    private List<Deployment> loadCurrentlyDeploymentsForApp(final Marathon marathon, final String appId) throws MarathonException {
         return marathon.getDeployments()
                 .stream()
-                .filter(deployment -> deployment.getAffectedApps().contains(deployingApp.getId()))
-                .map(Deployment::getVersion)
-                .sorted()
+                .filter(deployment -> deployment.getAffectedApps().contains(appId))
                 .collect(toList());
 
     }
